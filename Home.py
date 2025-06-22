@@ -128,6 +128,7 @@ if st.session_state.get("show_data_table", True) and "show_data_table" in st.ses
     heatmap = seaborn.clustermap(pivot_table,
                              cmap="viridis",
                              figsize=(4, 10),
-                             col_cluster=False)
+                             col_cluster=True,
+                             row_cluster=False,)
     st.pyplot(heatmap)
 
