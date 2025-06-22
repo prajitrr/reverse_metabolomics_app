@@ -59,13 +59,16 @@ if st.session_state.get("start_merge", True) and "finished_merge" not in st.sess
     redu_metadata = pd.read_csv("data/all_sampleinformation_redu_preprocessed.csv", dtype="str")
     redu_metadata = redu_metadata[redu_metadata["NCBITaxonomy"].isin(selected_taxa)]
 
-    # drop columns with all NaN values
+    # submit_button = st.button("Start Filter", key="start_merge")
+    
+    
+    # if submit_button:
+        # drop columns with all NaN values
     redu_metadata = redu_metadata.replace({"missing value": pd.NA})
     redu_metadata = redu_metadata.dropna(axis=1, how='all')
     redu_metadata_columns = redu_metadata.columns.tolist()
     keep_columns = [col for col in redu_metadata_columns if col in REDU_USEFUL_COLUMNS]
     redu_metadata = redu_metadata[["USI"] + keep_columns]
-    
     st.session_state["redu_metadata"] = redu_metadata
     st.session_state["fasst_files"] = fasst_files
     st.session_state["keep_columns"] = keep_columns
@@ -85,13 +88,15 @@ if st.session_state.get("show_variable_selection", True) and "show_variable_sele
     redu_metadata = st.session_state.get("redu_metadata", pd.DataFrame())
     column_chosen = st.session_state.get("column_chosen")
     column_variables = redu_metadata[column_chosen].unique().tolist()
-    column_variables = [var for var in column_variables if pd.notna(var) and var != "missing value"]
+    
+    column_variables_filtered = [var for var in column_variables if pd.notna(var) and var != "missing value"]
     selected_variables = st.multiselect("Select which variables you want to include", 
-                                    options=column_variables, 
-                                    default=column_variables, key="selected_variables")
+                                    options=column_variables_filtered, 
+                                    default=column_variables_filtered, key="selected_variables")
+    print(selected_variables)
     variables_ready = st.button("Submit Variables", key="variables_ready")
     if variables_ready:
-        redu_metadata = redu_metadata[redu_metadata[column_chosen].isin(selected_variables)]
+        # redu_metadata = redu_metadata[redu_metadata[column_chosen].isin(selected_variables)]
         st.session_state["redu_metadata"] = redu_metadata
         st.session_state["show_variable_selection"] = False
         st.session_state["show_data_table"] = True
@@ -105,6 +110,8 @@ if st.session_state.get("show_data_table", True) and "show_data_table" in st.ses
 
     
     redu_metadata = redu_metadata[["USI"] + [column_chosen]]
+    print("debugging")
+    print(redu_metadata[column_chosen].unique())
     merged_fasst = pd.DataFrame()
     for file in fasst_files:
         if file is not None:
@@ -119,8 +126,12 @@ if st.session_state.get("show_data_table", True) and "show_data_table" in st.ses
     merged_fasst = merged_fasst[merged_fasst["Delta Mass"].notna()]
     merged_fasst = merged_fasst[merged_fasst["Delta Mass"].abs() <= 0.05]    
     merged_fasst["USI"] = merged_fasst["USI"].apply(lambda x: process_USI(x))
+    # st.dataframe(merged_fasst, use_container_width=True)
+    # st.dataframe(redu_metadata, use_container_width=True)
     all_merged_data = pd.merge(merged_fasst, redu_metadata, on="USI", how="left")
-    all_merged_data.dropna(subset=[column_chosen], inplace=True)
+    print("debugging 2")
+    print(all_merged_data[column_chosen].unique())
+    #all_merged_data.dropna(subset=[column_chosen], inplace=True)
     st.write(f"Filtered data to {len(all_merged_data)} samples based on selected variables.")
     pivot_table = all_merged_data.groupby(column_chosen)["Compound"].value_counts(dropna=False).unstack(fill_value=0)
     # log transform the values
